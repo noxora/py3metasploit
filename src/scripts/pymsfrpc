@@ -44,6 +44,6 @@ if __name__ == '__main__':
         m = MsfRpc(o.__dict__.pop('password'), **o.__dict__)
         m.interact('')
     except MsfRpcError, m:
-        print str(m)
+        print(str(m))
         exit(-1)
     exit(0)

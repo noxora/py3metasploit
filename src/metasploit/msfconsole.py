@@ -66,13 +66,13 @@ class MsfRpcConsole(object):
                 if self.callback is not None:
                     self.callback(d)
                 else:
-                    print d['data']
+                    print(d['data'])
         else:
             if d:
                 if self.callback is not None:
                     self.callback(dict(data=d, prompt=self.prompt))
                 else:
-                    print d
+                    print(d)
         Timer(0.5, self._poller).start()
 
     def execute(self, command):

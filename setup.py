@@ -20,7 +20,7 @@ setup(
         'src/scripts/pymsfrpc'
     ],
     install_requires=[
-        'msgpack-python>=0.1.12'
+        'msgpack-python>=0.5.6'
     ],
     url='https://github.com/allfro/pymetasploit',
     download_url='https://github.com/allfro/pymetasploit/zipball/master',

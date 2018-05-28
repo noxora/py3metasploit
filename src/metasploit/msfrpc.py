@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-
-from httplib import HTTPConnection, HTTPSConnection
+from http.client import HTTPConnection, HTTPSConnection
 import ssl
 from numbers import Number
-
 from msgpack import packb, unpackb
 
 __author__ = 'Nadeem Douba'
@@ -181,7 +179,14 @@ class MsfRpcClient(object):
     _headers = {
         'Content-Type' : 'binary/message-pack'
     }
-
+    def _convert_keys_to_string(self, dictionary):
+        """Recursively converts dictionary keys to strings."""
+        if not isinstance(dictionary, dict):
+            if isinstance(dictionary, bytes):
+                return dictionary.decode()
+            return dictionary
+        return dict((k.decode() if isinstance(k, bytes) else str(k), self._convert_keys_to_string(v)) 
+            for k, v in dictionary.items())
     def __init__(self, password, **kwargs):
         """
         Connects and authenticates to a Metasploit RPC daemon.
@@ -227,17 +232,19 @@ class MsfRpcClient(object):
         l = [ method ]
         l.extend(args)
         if method == MsfRpcMethod.AuthLogin:
-            self.client.request('POST', self.uri, packb(l), self._headers)
+            self.client.request('POST', self.uri, packb(l, use_bin_type=True), self._headers)
             r = self.client.getresponse()
             if r.status == 200:
-                return unpackb(r.read())
+                result = unpackb(r.read(), encoding='utf8')
+                return self._convert_keys_to_string(result)
             raise MsfRpcError('An unknown error has occurred while logging in.')
         elif self.authenticated:
             l.insert(1, self.sessionid)
-            self.client.request('POST', self.uri, packb(l), self._headers)
+            self.client.request('POST', self.uri, packb(l, use_bin_type=True), self._headers)
             r = self.client.getresponse()
             if r.status == 200:
-                result = unpackb(r.read())
+                result = unpackb(r.read(), encoding='utf8')
+                result = self._convert_keys_to_string(result)
                 if 'error' in result:
                     raise MsfRpcError(result['error_message'])
                 return result
@@ -1328,8 +1335,10 @@ class MsfModule(object):
         self.modulename = mname
         self.rpc = rpc
         self._info = rpc.call(MsfRpcMethod.ModuleInfo, mtype, mname)
+        property_attributes = ["advanced", "evasion", "options", "required", "runoptions"]
         for k in self._info:
-            setattr(self, k, self._info.get(k))
+            if k not in property_attributes:
+                setattr(self, k, self._info.get(k))
         self._moptions = rpc.call(MsfRpcMethod.ModuleOptions, mtype, mname)
         self._roptions = []
         self._aoptions = []
@@ -1350,7 +1359,10 @@ class MsfModule(object):
         """
         All the module options.
         """
-        return self._moptions.keys()
+        return list(self._moptions.keys())
+    @options.setter
+    def options(self, value):
+        self._moptions = value
 
     @property
     def required(self):
@@ -1462,13 +1474,13 @@ class MsfModule(object):
                         )
                     runopts['PAYLOAD'] = payload.modulename
                     for k, v in payload.runoptions.iteritems():
-                        if v is None or (isinstance(v, basestring) and not v):
+                        if v is None or (isinstance(v, str) and not v):
                             continue
                         if k not in runopts or runopts[k] is None or \
-                           (isinstance(runopts[k], basestring) and not runopts[k]):
+                           (isinstance(runopts[k], str) and not runopts[k]):
                             runopts[k] = v
 #                    runopts.update(payload.runoptions)
-                elif isinstance(payload, basestring):
+                elif isinstance(payload, str):
                     if payload not in self.payloads:
                         raise ValueError('Invalid payload (%s) for given target (%d).' % (payload, self.target))
                     runopts['PAYLOAD'] = payload
