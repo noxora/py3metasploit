@@ -193,7 +193,7 @@ Success! We managed to pop the box! `client.sessions.list` shows us that we have
 the one we received when executing the module earlier (`exploit.execute()`). Let's interact with the shell:
 
 ```python
->>> shell = client.sessions.session("1")
+>>> shell = client.sessions.session(1)
 >>> shell.write('whoami\n')
 >>> print(shell.read())
 Microsoft Windows [Version 6.1.7601]

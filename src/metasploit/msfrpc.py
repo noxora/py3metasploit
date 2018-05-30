@@ -181,12 +181,16 @@ class MsfRpcClient(object):
     }
     def _convert_keys_to_string(self, dictionary):
         """Recursively converts dictionary keys to strings."""
-        if not isinstance(dictionary, dict):
-            if isinstance(dictionary, bytes):
-                return dictionary.decode()
-            return dictionary
-        return dict((k.decode() if isinstance(k, bytes) else str(k), self._convert_keys_to_string(v)) 
-            for k, v in dictionary.items())
+        if isinstance(dictionary, dict):
+            return dict((k.decode() if isinstance(k, bytes) else k, self._convert_keys_to_string(v)) 
+                for k, v in dictionary.items())
+        elif isinstance(dictionary, list):
+            return list(self._convert_keys_to_string(item)
+                for item in dictionary)
+        elif isinstance(dictionary, bytes):
+            return dictionary.decode()
+        return dictionary
+
     def __init__(self, password, **kwargs):
         """
         Connects and authenticates to a Metasploit RPC daemon.
@@ -1473,7 +1477,7 @@ class MsfModule(object):
                             'Invalid payload (%s) for given target (%d).' % (payload.modulename, self.target)
                         )
                     runopts['PAYLOAD'] = payload.modulename
-                    for k, v in payload.runoptions.iteritems():
+                    for k, v in payload.runoptions.items():
                         if v is None or (isinstance(v, str) and not v):
                             continue
                         if k not in runopts or runopts[k] is None or \
@@ -1956,7 +1960,11 @@ class ConsoleManager(MsfManager):
         """
         A list of active consoles.
         """
-        return self.rpc.call(MsfRpcMethod.ConsoleList)
+        #return self.rpc.call(MsfRpcMethod.ConsoleList)
+
+        #_list = self.rpc.call(MsfRpcMethod.ConsoleList)
+        return list(item["id"] for item in self.rpc.call(MsfRpcMethod.ConsoleList)['consoles'])
+        
 
     def console(self, cid=None):
         """
