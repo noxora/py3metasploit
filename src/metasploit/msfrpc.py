@@ -79,6 +79,7 @@ class MsfRpcMethod(object):
     CoreStop = 'core.stop'
     CoreSetG = 'core.setg'
     CoreUnsetG = 'core.unsetg'
+    CoreGetG = 'core.getg'
     CoreSave = 'core.save'
     CoreReloadModules = 'core.reload_modules'
     CoreModuleStats = 'core.module_stats'
@@ -212,6 +213,11 @@ class MsfRpcClient(object):
         self.ssl = kwargs.get('ssl', True)
         self.verify_ssl = kwargs.get('verify', False)
         self.sessionid = kwargs.get('token')
+        self.password = password
+        self.username = kwargs.get('username', 'msf')
+        self.connect()
+
+    def connect(self):
         if self.ssl:
             if self.verify_ssl:
                 self.client = HTTPSConnection(self.server, self.port)
@@ -219,7 +225,8 @@ class MsfRpcClient(object):
                 self.client = HTTPSConnection(self.server, self.port, context=ssl._create_unverified_context())
         else:
             self.client = HTTPConnection(self.server, self.port)
-        self.login(kwargs.get('username', 'msf'), password)
+        self.login(self.usernmae, self.password)
+
 
     def call(self, method, *args):
         """
@@ -237,7 +244,12 @@ class MsfRpcClient(object):
         l.extend(args)
         if method == MsfRpcMethod.AuthLogin:
             self.client.request('POST', self.uri, packb(l, use_bin_type=True), self._headers)
-            r = self.client.getresponse()
+            try:
+                r = self.client.getresponse()
+            except:
+                self.connect()
+                r = self.client.getresponse()
+
             if r.status == 200:
                 result = unpackb(r.read(), encoding='utf8')
                 return self._convert_keys_to_string(result)
@@ -245,7 +257,12 @@ class MsfRpcClient(object):
         elif self.authenticated:
             l.insert(1, self.sessionid)
             self.client.request('POST', self.uri, packb(l, use_bin_type=True), self._headers)
-            r = self.client.getresponse()
+            try:
+                r = self.client.getresponse()
+            except:
+                self.connect()
+                r = self.client.getresponse()
+                
             if r.status == 200:
                 result = unpackb(r.read(), encoding='utf8')
                 result = self._convert_keys_to_string(result)
@@ -1279,6 +1296,15 @@ class CoreManager(MsfManager):
         """
         self.rpc.call(MsfRpcMethod.CoreUnsetG, var)
 
+    def getg(self, var):
+        """
+        Get a global variable
+
+        Mandatory Arguments:
+        - var : the variable name
+        """
+        return self.rpc.call(MsfRpcMethod.CoreGetG, var)
+
     def save(self):
         """
         Save the core state.
@@ -1396,6 +1422,7 @@ class MsfModule(object):
         if some of the required options are missing.
         """
         outstanding = set(self.required).difference(self._runopts.keys())
+        outstanding = [i for i in outstanding if not self.rpc.core.getg(i)]
         if outstanding:
             raise TypeError('Module missing required parameter: %s' % ', '.join(outstanding))
         return self._runopts
