@@ -225,7 +225,7 @@ class MsfRpcClient(object):
                 self.client = HTTPSConnection(self.server, self.port, context=ssl._create_unverified_context())
         else:
             self.client = HTTPConnection(self.server, self.port)
-        self.login(self.usernmae, self.password)
+        self.login(self.username, self.password)
 
 
     def call(self, method, *args):
