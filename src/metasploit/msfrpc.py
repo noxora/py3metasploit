@@ -1500,8 +1500,8 @@ class MsfModule(object):
             - for a meterpreter/reverse_tcp session. Add more lines for extra
             - options
             """
-+           if kwargs.get('LHOST'): runopts['LHOST'] = kwargs.get('LHOST')
-+           if kwargs.get('LPORT'): runopts['LPORT'] = kwargs.get('LPORT')
+            if kwargs.get('LHOST'): runopts['LHOST'] = kwargs.get('LHOST')
+            if kwargs.get('LPORT'): runopts['LPORT'] = kwargs.get('LPORT')
             if 'DisablePayloadHandler' in runopts and runopts['DisablePayloadHandler']:
                 pass
             elif payload is None:
