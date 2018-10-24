@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from http.client import HTTPConnection, HTTPSConnection
 import ssl
 from numbers import Number
@@ -1002,7 +1002,7 @@ class Workspace(object):
         self.rpc.call(MsfRpcMethod.DbImportData, {'workspace' : self.name, 'data' : data})
 
     def importfile(self, fname):
-        r = file(fname, mode='rb')
+        r = open(fname, mode='rb')
         self.rpc.call(MsfRpcMethod.DbImportData, {'workspace' : self.name, 'data' : r.read()})
         r.close()
 

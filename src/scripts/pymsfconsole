@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from code import InteractiveConsole
 from atexit import register
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     try:
         m = MsfConsole(o.__dict__.pop('password'), **o.__dict__)
         m.interact('')
-    except MsfRpcError, m:
+    except MsfRpcError as m:
         print(str(m))
         exit(-1)
     exit(0)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 __author__ = 'Nadeem Douba'
 __copyright__ = 'Copyright 2012, PyMetasploit Project'
